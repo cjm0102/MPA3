@@ -4,7 +4,64 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BMI Calculator</title>
-    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            background-color: #f9f9f9;
+        }
+        h1, h2 {
+            text-align: center;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+        label, input, button {
+            margin: 5px 0;
+        }
+        input, button {
+            padding: 10px;
+            font-size: 16px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 10px;
+            text-align: center;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .clear-button, .display-button {
+            background-color: #ff4c4c;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+            padding: 10px;
+        }
+        #bmiReadings {
+            margin-top: 20px;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            background-color: #f9f9f9;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -33,7 +90,11 @@
             <tbody id="previousRecords" style="display:none;">
             </tbody>
         </table>
+        <div id="bmiReadings">
+            <h2>BMI Readings</h2>
+        </div>
     </div>
+
     <script>
         document.addEventListener("DOMContentLoaded", function() {
             const bmiForm = document.getElementById("bmiForm");
@@ -41,6 +102,41 @@
             const clearButton = document.getElementById("clearData");
             const currentRecordBody = document.getElementById("currentRecord");
             const previousRecordsBody = document.getElementById("previousRecords");
+            const bmiReadingsDiv = document.getElementById("bmiReadings");
+
+            const apiKey = '5dc2527186aaf9de560e5841f1a44bd6'; // Replace with your actual API key
+            const apiEndpoint = 'https://api.humanapi.co/v1/human/bmi/readings';
+
+            async function fetchBMIReadings() {
+                try {
+                    const response = await fetch(apiEndpoint, {
+                        headers: {
+                            'Authorization': `Bearer ${apiKey}`
+                        }
+                    });
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    const data = await response.json();
+                    return data;
+                } catch (error) {
+                    console.error('Failed to fetch BMI readings:', error);
+                    return [];
+                }
+            }
+
+            function displayBMIReadings(readings) {
+                bmiReadingsDiv.innerHTML += readings.map(reading => `
+                    <p>Date: ${new Date(reading.timestamp).toLocaleString()}</p>
+                    <p>BMI: ${reading.value} ${reading.unit}</p>
+                    <hr>
+                `).join('');
+            }
+
+            async function initializeBMIReadings() {
+                const readings = await fetchBMIReadings();
+                displayBMIReadings(readings);
+            }
 
             function getBMIRecords() {
                 return JSON.parse(localStorage.getItem("bmiRecords")) || [];
@@ -65,7 +161,6 @@
             function displayPreviousRecords() {
                 const records = getBMIRecords();
                 previousRecordsBody.innerHTML = "";
-                // Skip the latest record
                 for (let i = records.length - 2; i >= 0; i--) {
                     const record = records[i];
                     const row = document.createElement("tr");
@@ -127,6 +222,9 @@
                 previousRecordsBody.style.display = 'none';
                 currentRecordBody.innerHTML = "";
             });
+
+            // Initialize BMI readings on page load
+            initializeBMIReadings();
         });
     </script>
 </body>
