@@ -9,43 +9,38 @@
     <style>
         body {
             background: #f7f9fc;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
             margin: 0;
             padding-bottom: 80px; /* Space for navigation bar */
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            overflow-y: auto;
         }
         .weather-container, .forecast-container {
             background: #fff;
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            text-align: center;
             margin-bottom: 20px;
             width: 90%;
-            max-width: 600px;
+            max-width: 1200px;
         }
-        .weather-container h1, .forecast-container h2 {
-            font-size: 24px;
-            margin-bottom: 20px;
+        .forecast-container {
+            display: flex;
+            flex-direction: column;
         }
-        .weather-info img {
-            width: 100px;
-        }
-        .forecast-container .day {
-            margin: 10px 0;
+        .day {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
         }
-        .forecast-container .day img {
-            width: 50px;
-        }
-        .outfit-suggestion {
-            font-weight: bold;
-            color: green;
+        .day:last-child {
+            border-bottom: none;
         }
         .navbar {
             position: fixed;
@@ -65,37 +60,74 @@
         .navbar .nav-link.active {
             color: #007bff;
         }
+        .weather-info, .exercise-info {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .exercise-suggestions {
+            display: flex;
+            flex-direction: column;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 1200px;
+        }
+        .exercise-suggestions h3 {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        .exercise-suggestions .exercise {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 10px 0;
+        }
+        .exercise-suggestions .exercise i {
+            font-size: 24px;
+            margin-right: 10px;
+        }
     </style>
 </head>
 <body>
-<div class="weather-container">
-    <button onclick="window.history.back()" class="btn btn-secondary mb-3">Back</button>
-    <h1>Current Weather</h1>
-    <div class="weather-info">
-        <div>
-            <p id="location"></p>
-            <p id="description"></p>
-            <p id="temperature"></p>
-            <p id="date"></p>
+<div class="container">
+    <div class="weather-container">
+        <button onclick="window.history.back()" class="btn btn-secondary mb-3">Back</button>
+        <h1>Current Weather</h1>
+        <div class="weather-info">
+            <div>
+                <p id="location"></p>
+                <p id="description"></p>
+                <p id="temperature"></p>
+                <p id="date"></p>
+            </div>
+            <img id="icon" src="" alt="Weather Icon">
         </div>
-        <img id="icon" src="" alt="Weather Icon">
+    </div>
+
+    <div class="forecast-container">
+        <h2>7-Day Forecast</h2>
+        <div id="forecast"></div>
+    </div>
+
+    <div id="outfitSuggestion" class="outfit-suggestion"></div>
+
+    <div class="exercise-suggestions">
+        <h3>Suggested Exercises</h3>
+        <div id="exerciseList"></div>
     </div>
 </div>
 
-<div class="forecast-container">
-    <h2>7-Day Forecast</h2>
-    <div id="forecast"></div>
-</div>
-
-<div id="outfitSuggestion" class="outfit-suggestion"></div>
-
 <nav class="navbar fixed-bottom navbar-light">
     <div class="container-fluid justify-content-around">
-        <a class="nav-link" href="HOME.HTML">
+        <a class="nav-link" href="home.html">
             <i class="bi bi-house-fill"></i>
             <span class="nav-text">Home</span>
         </a>
-        <a class="nav-link" href="#bmi">
+        <a class="nav-link" href="bmi.html">
             <i class="bi bi-heart"></i>
             <span class="nav-text">BMI</span>
         </a>
@@ -134,10 +166,18 @@
                 $('#icon').attr('src', iconUrl);
                 $('#date').text(date);
 
-                if (description.includes('晴天')) {
-                    $('#outfitSuggestion').text('The weather is sunny (晴天). It is suitable for an outdoor outfit.');
+                if (description.toLowerCase().includes('sunny')) {
+                    $('#outfitSuggestion').text('The weather is sunny. It is suitable for an outdoor outfit.');
+                    displayExercises(['Outdoor jogging', 'Biking', 'Hiking'], true);
+                } else if (description.toLowerCase().includes('cloudy')) {
+                    $('#outfitSuggestion').text('The weather is cloudy. It might be suitable for light outdoor exercises.');
+                    displayExercises(['Outdoor jogging', 'Biking'], true);
+                } else if (description.toLowerCase().includes('rain') || description.toLowerCase().includes('thunderstorm')) {
+                    $('#outfitSuggestion').text('The weather is rainy or thunderstorm. Indoor exercises are recommended.');
+                    displayExercises(['Indoor yoga', 'Home workout', 'Gym exercises'], false);
                 } else {
                     $('#outfitSuggestion').text('');
+                    $('#exerciseList').html('');
                 }
             })
             .catch(error => {
@@ -158,7 +198,7 @@
                     const iconUrl = `https:${day.day.condition.icon}`;
 
                     forecastHtml += `
-                        <div class="day">
+                        <div class="day" onclick="showDetails('${date}', '${description}', '${temperature}', '${iconUrl}', '${day.day.condition.text}')">
                             <div>${date}</div>
                             <div>${description}</div>
                             <div>${temperature}</div>
@@ -173,6 +213,66 @@
                 console.error('Error fetching the forecast data:', error);
                 alert('Error fetching the forecast data.');
             });
+    }
+
+    function displayExercises(exercises, isOutdoor) {
+        let exerciseHtml = '';
+
+        exercises.forEach(exercise => {
+            let icon;
+            switch (exercise) {
+                case 'Outdoor jogging':
+                    icon = 'bi bi-running';
+                    break;
+                case 'Biking':
+                    icon = 'bi bi-bicycle';
+                    break;
+                case 'Hiking':
+                    icon = 'bi bi-tree';
+                    break;
+                case 'Indoor yoga':
+                    icon = 'bi bi-body-text';
+                    break;
+                case 'Home workout':
+                    icon = 'bi bi-house';
+                    break;
+                case 'Gym exercises':
+                    icon = 'bi bi-activity';
+                    break;
+                default:
+                    icon = 'bi bi-question-circle';
+                    break;
+            }
+            exerciseHtml += `
+                <div class="exercise">
+                    <i class="${icon}" style="font-size: 24px; margin-right: 10px;"></i>
+                    <span>${exercise}</span>
+                </div>
+            `;
+        });
+
+        $('#exerciseList').html(exerciseHtml);
+    }
+
+    function showDetails(date, description, temperature, iconUrl, condition) {
+        $('#location').text(date);
+        $('#description').text(description);
+        $('#temperature').text(temperature);
+        $('#icon').attr('src', iconUrl);
+
+        if (condition.toLowerCase().includes('sunny')) {
+            $('#outfitSuggestion').text(`The weather on ${date} is sunny. It is suitable for an outdoor outfit.`);
+            displayExercises(['Outdoor jogging', 'Biking', 'Hiking'], true);
+        } else if (condition.toLowerCase().includes('cloudy')) {
+            $('#outfitSuggestion').text(`The weather on ${date} is cloudy. It might be suitable for light outdoor exercises.`);
+            displayExercises(['Outdoor jogging', 'Biking'], true);
+        } else if (condition.toLowerCase().includes('rain') || condition.toLowerCase().includes('thunderstorm')) {
+            $('#outfitSuggestion').text(`The weather on ${date} is rainy or thunderstorm. Indoor exercises are recommended.`);
+            displayExercises(['Indoor yoga', 'Home workout', 'Gym exercises'], false);
+        } else {
+            $('#outfitSuggestion').text('');
+            $('#exerciseList').html('');
+        }
     }
 
     function getLocation() {
